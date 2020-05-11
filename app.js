@@ -64,6 +64,35 @@ async function get_saved_artists() {
     console.log('artist count -- server:', total, 'us:', i);
 }
 
+async function get_saved_albums() {
+    let total = 3333;
+    let offset = 0;
+    let N = 25;
+    let i = 0;
+
+    while (offset <= total) {
+        await spotifyApi.getMySavedAlbums({
+            limit : N,
+            offset: offset
+        })
+        .then(function(data) {
+            total = data.body.total;
+            offset = offset + N;
+            for (const a of data.body.items) {
+                console.log(a.album.name);
+                rc.json_set('albums.' + a.album.id, '.', JSON.stringify(a), (err) => {
+                    if (err) { throw err; }
+                });
+                i++;
+            }
+        })
+        .catch(function(err) {
+            console.log('Something went wrong!', JSON.stringify(err));
+        });
+    }
+    console.log('albums count -- server:', total, 'us:', i);
+}
+
 async function get_saved_tracks() {
     let total = 3333;
     let offset = 0;
@@ -108,6 +137,7 @@ function main(code) {
         rc.config("set", "save", "60 1");
     })
     .then(async () => await get_saved_tracks())
+    .then(async () => await get_saved_albums())
     .then(async () => await get_saved_artists())
     .then(() => {rc.save()})
     .then(() => {rc.quit()})
