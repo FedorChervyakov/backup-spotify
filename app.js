@@ -64,6 +64,64 @@ async function get_saved_artists() {
     console.log('artist count -- server:', total, 'us:', i);
 }
 
+async function get_tracks_from_playlist(playlist_id) {
+    const user_id = "21dusponfwlelnmhezsxout7q";
+    let total = 3333;
+    let offset = 0;
+    let N = 25;
+    let i = 0;
+
+    while (offset <= total) {
+        await spotifyApi.getPlaylistTracks(playlist_id, {
+            limit : N,
+            offset: offset
+        })
+        .then(function(data) {
+            total = data.body.total;
+            offset = offset + N;
+            rc.json_set('playlists.tracks.'+playlist_id, '.',
+                        JSON.stringify(data.body.items), (err) => {
+                if (err) { throw err; }
+            });
+            i += data.body.items.length;
+        })
+        .catch(function(err) {
+            console.log('Something went wrong!', err);
+        });
+    }
+    console.log('songs in', playlist_id, 'count -- server:', total, 'us:', i);
+}
+
+async function get_saved_playlists() {
+    let total = 3333;
+    let offset = 0;
+    let N = 25;
+    let i = 0;
+
+    while (offset <= total) {
+        await spotifyApi.getUserPlaylists({
+            limit : N,
+            offset: offset
+        })
+        .then(async function(data) {
+            total = data.body.total;
+            offset = offset + N;
+            for (const p of data.body.items) {
+                console.log(p.name);
+                rc.json_set('playlists.' + p.id, '.', JSON.stringify(p), (err) => {
+                    if (err) { throw err; }
+                });
+                await get_tracks_from_playlist(p.id);
+                i++;
+            }
+        })
+        .catch(function(err) {
+            console.log('Something went wrong!', JSON.stringify(err));
+        });
+    }
+    console.log('playlists count -- server:', total, 'us:', i);
+}
+
 async function get_saved_albums() {
     let total = 3333;
     let offset = 0;
@@ -139,6 +197,7 @@ function main(code) {
     .then(async () => await get_saved_tracks())
     .then(async () => await get_saved_albums())
     .then(async () => await get_saved_artists())
+    .then(async () => await get_saved_playlists())
     .then(() => {rc.save()})
     .then(() => {rc.quit()})
     .then(() => {
