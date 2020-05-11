@@ -13,7 +13,7 @@ rejson(redis);
 let rc = redis.createClient();
 
 function authorize() {
-    var scopes = ['user-read-private', 'user-library-read'];
+    var scopes = ['user-read-private', 'user-library-read', 'user-follow-read'];
     var state = 'some-state';
 
     const hostname = 'localhost';
@@ -33,6 +33,35 @@ function authorize() {
     });
 
     open(authorizeURL);
+}
+
+async function get_saved_artists() {
+    let total = 3333;
+    let N = 20;
+    let after;
+    let i = 0;
+
+    while (i < total) {
+        await spotifyApi.getFollowedArtists({
+            limit : N,
+            after: after
+        })
+        .then(function(data) {
+            total = data.body.artists.total;
+            after = data.body.artists.cursors.after;
+            for (const a of data.body.artists.items) {
+                console.log(a.name);
+                rc.json_set('artists.' + a.id, '.', JSON.stringify(a), (err) => {
+                    if (err) { throw err; }
+                });
+                i++;
+            }
+        })
+        .catch(function(err) {
+            console.log('Something went wrong!', JSON.stringify(err));
+        });
+    }
+    console.log('artist count -- server:', total, 'us:', i);
 }
 
 async function get_saved_tracks() {
@@ -79,6 +108,7 @@ function main(code) {
         rc.config("set", "save", "60 1");
     })
     .then(async () => await get_saved_tracks())
+    .then(async () => await get_saved_artists())
     .then(() => {rc.save()})
     .then(() => {rc.quit()})
     .then(() => {
