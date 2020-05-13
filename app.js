@@ -13,7 +13,13 @@ rejson(redis);
 let rc = redis.createClient();
 
 function authorize() {
-    var scopes = ['user-read-private', 'user-library-read', 'user-follow-read'];
+    var scopes = [
+        'user-read-private',
+        'user-library-read',
+        'user-follow-read',
+        'playlist-read-private',
+        'playlist-read-collaborative',
+    ];
     var state = 'some-state';
 
     const hostname = 'localhost';
